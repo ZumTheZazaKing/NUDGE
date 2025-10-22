@@ -12,6 +12,7 @@ import winsound
 import queue
 import math
 import webbrowser
+import subprocess  # Added for launching notepad
 
 # --- Dependencies for Global Input and Overlay ---
 # You must install these libraries: pip install pynput pywin32 Pillow
@@ -31,7 +32,7 @@ FPS = 60
 BLACK = "#000000"
 RED = "#C80000"
 WHITE = "#FFFFFF"
-CHROMA_KEY = "#FF0080" # A magenta-like color
+CHROMA_KEY = "#FF0080"  # A magenta-like color
 
 # --- Customization ---
 DONT_MOVE_TEXT = "DON'T YOU DARE MOVE"
@@ -42,7 +43,7 @@ FALLBACK_SOUND_FILE = "temp_scream.wav"
 
 # --- Horror Event Probabilities ---
 # Higher chance when typing directly
-TYPING_POSSESSION_ON_KEYPRESS_CHANCE = 100 # 1 in X chance specifically on key press
+TYPING_POSSESSION_ON_KEYPRESS_CHANCE = 100  # 1 in X chance specifically on key press
 # Lower chance from general checks (mouse move/click)
 TYPING_POSSESSION_GENERAL_CHANCE = 1300
 
@@ -149,36 +150,30 @@ class HorrorManager:
             self.dont_move_data['failed'] = True
             # Allow key press, but register the failure
         
-        elif self.active_event == 'typing_possession':
-            if random.randint(1, 4) == 1: # 1 in 4 chance to possess while active
-                phrases = [" H̸E̴L̷P̴ ", " G̴O̴T̴ Y̵O̷U̵ ", " W̶H̴Y̴ ", " L̷O̴O̸K̵ ̶B̴E̴H̴I̸N̸D̴ ", " I̵T̷ ̴H̷U̵R̴T̴S̵ "]
-                phrase = random.choice(phrases)
-                self.kb_controller.type(phrase)
-                return False # Suppress the original key
+        # --- TYPING POSSESSION CHANGE ---
+        # Removed the 'elif self.active_event == 'typing_possession':' block.
+        # The event is no longer an active interceptor.
         
         elif self.active_event is None:
             # Priority check for typing possession on key press
             if random.randint(1, TYPING_POSSESSION_ON_KEYPRESS_CHANCE) == 1:
-                 if self.event_lock.acquire(blocking=False):
+                if self.event_lock.acquire(blocking=False):
                     try:
                         self.active_event = "typing_possession"
-                        self.gui_queue.put({'event': 'typing_possession', 'duration': 10})
-                        possession_triggered = True # Mark that possession triggered specifically
-
-                        # Perform the possession immediately for this first keypress
-                        phrases = [" H̸E̴L̷P̴ ", " G̴O̴T̴ Y̵O̷U̵ ", " W̶H̴Y̴ ", " L̷O̴O̸K̵ ̶B̴E̴H̴I̸N̸D̴ ", " I̵T̷ ̴H̷U̵R̴T̴S̵ "]
-                        phrase = random.choice(phrases)
-                        self.kb_controller.type(phrase)
-                        return False # Suppress the original key
+                        # --- TYPING POSSESSION CHANGE ---
+                        # Only put the event on the queue. No duration, no immediate typing.
+                        self.gui_queue.put({'event': 'typing_possession'})
+                        possession_triggered = True  # Mark that possession triggered specifically
+                        # We no longer type or suppress the key here.
                     except Exception as e:
                         print(f"Error triggering typing possession on keypress: {e}")
-                        self.event_lock.release() # Release lock on error
+                        self.event_lock.release()  # Release lock on error
             
             # If possession wasn't triggered by priority check, do the general check
             if not possession_triggered:
-                self.check_for_random_horror(check_typing_possession=True) # Also check typing possession here, but lower chance
+                self.check_for_random_horror(check_typing_possession=True)  # Also check typing possession here, but lower chance
 
-        return True # Allow key press to go through unless possession suppressed it
+        return True  # Allow key press to go through
 
     def check_for_random_horror(self, check_typing_possession=False):
         # Use acquire with blocking=False to immediately return if lock is held.
@@ -188,8 +183,10 @@ class HorrorManager:
             try:
                 # Conditionally check for typing possession based on caller
                 if check_typing_possession and random.randint(1, TYPING_POSSESSION_GENERAL_CHANCE) == 1:
-                     self.active_event = "typing_possession"
-                     self.gui_queue.put({'event': 'typing_possession', 'duration': 10})
+                    self.active_event = "typing_possession"
+                    # --- TYPING POSSESSION CHANGE ---
+                    # No duration needed
+                    self.gui_queue.put({'event': 'typing_possession'})
                 elif random.randint(1, BROWSER_HIJACK_CHANCE) == 1:
                     self.active_event = "browser_hijack"
                     self.gui_queue.put({'event': 'browser_hijack'})
@@ -221,10 +218,10 @@ class HorrorManager:
                     target_pos = self.mouse_pos
                     self.gui_queue.put({'event': 'entity', 'target': target_pos})
                 else:
-                    self.event_lock.release() # No event triggered, release lock
+                    self.event_lock.release()  # No event triggered, release lock
             except Exception as e:
                 print(f"Error checking for horror: {e}")
-                self.event_lock.release() # Ensure lock is released on error
+                self.event_lock.release()  # Ensure lock is released on error
             
             if popup_hell_triggered:
                 self.event_lock.release()
@@ -243,7 +240,7 @@ class HorrorGUI:
     def __init__(self, manager):
         self.manager = manager
         self.root = tk.Tk()
-        self.root.withdraw() # Hide the main window
+        self.root.withdraw()  # Hide the main window
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
         self.active_popups = []
@@ -276,11 +273,13 @@ class HorrorGUI:
             elif event == 'browser_hijack':
                 self.create_browser_hijack()
             elif event == 'typing_possession':
-                self.create_typing_possession(task['duration'])
+                # --- TYPING POSSESSION CHANGE ---
+                # No longer takes duration
+                self.create_typing_possession()
         except queue.Empty:
             pass
         finally:
-            self.root.after(50, self.process_queue) # Check queue every 50ms
+            self.root.after(50, self.process_queue)  # Check queue every 50ms
 
     def create_overlay(self):
         overlay = tk.Toplevel(self.root)
@@ -326,7 +325,7 @@ class HorrorGUI:
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 # --- end of logic ---
 
-                self.photo_image = ImageTk.PhotoImage(img) # Must hold reference
+                self.photo_image = ImageTk.PhotoImage(img)  # Must hold reference
                 canvas.config(bg=BLACK)
                 canvas.create_image(self.screen_width//2, self.screen_height//2, image=self.photo_image)
             except Exception as e:
@@ -349,7 +348,7 @@ class HorrorGUI:
         canvas.create_text(self.screen_width/2, self.screen_height/2, text=DONT_MOVE_TEXT, fill=RED, font=("Arial", 60, "bold"))
         def start_detection():
             self.manager.dont_move_data['detection_active'] = True
-            check_failure(time.time() + 3) # 3 seconds to stay still
+            check_failure(time.time() + 3)  # 3 seconds to stay still
         def check_failure(end_time):
             if not overlay.winfo_exists():
                 self.manager.finish_event()
@@ -359,11 +358,11 @@ class HorrorGUI:
                 self.show_jumpscare_content(canvas)
                 self.root.after(500, lambda: [overlay.destroy(), winsound.PlaySound(None, winsound.SND_PURGE), self.manager.finish_event()])
             elif time.time() >= end_time:
-                 overlay.destroy()
-                 self.manager.finish_event()
+                overlay.destroy()
+                self.manager.finish_event()
             else:
                 self.root.after(1000//FPS, lambda: check_failure(end_time))
-        self.root.after(1000, start_detection) # 1s grace period
+        self.root.after(1000, start_detection)  # 1s grace period
 
     def create_entity(self, target_pos):
         overlay, canvas = self.create_overlay()
@@ -406,7 +405,7 @@ class HorrorGUI:
                 self.root.after(500, lambda: [overlay.destroy(), winsound.PlaySound(None, winsound.SND_PURGE), self.manager.finish_event()])
                 return
             if center_x < -width or center_x > self.screen_width + width or center_y < -height or center_y > self.screen_height + height:
-                 overlay.destroy(); self.manager.finish_event(); return
+                overlay.destroy(); self.manager.finish_event(); return
             self.root.after(1000//FPS, animate)
         animate()
 
@@ -418,13 +417,13 @@ class HorrorGUI:
             if popup in self.active_popups:
                 self.active_popups.remove(popup)
             popup.destroy()
-            if not self.active_popups: # Player won
+            if not self.active_popups:  # Player won
                 if self.popup_timer_id:
                     self.root.after_cancel(self.popup_timer_id)
                     self.popup_timer_id = None
                 print("Popup Hell: SUCCESS")
-                self.manager.popup_count = 10 # Reset
-                self.manager.popup_time_limit = 10 # Reset
+                self.manager.popup_count = 10  # Reset
+                self.manager.popup_time_limit = 10  # Reset
                 self.manager.finish_popup_hell()
 
         for _ in range(self.manager.popup_count):
@@ -443,7 +442,7 @@ class HorrorGUI:
             self.active_popups.append(popup)
 
         def update_timer(current_time):
-            if not self.active_popups: return # Game already won
+            if not self.active_popups: return  # Game already won
             
             for popup in self.active_popups:
                 if popup.winfo_exists():
@@ -451,10 +450,10 @@ class HorrorGUI:
                         if isinstance(widget, tk.Label):
                             widget.config(text=f"Time: {current_time}")
 
-            if current_time <= 0: # Timer ran out, player lost
+            if current_time <= 0:  # Timer ran out, player lost
                 print("Popup Hell: FAILED")
-                self.manager.popup_count += 5 # Increase difficulty
-                self.manager.popup_time_limit += 5 # Increase difficulty
+                self.manager.popup_count += 5  # Increase difficulty
+                self.manager.popup_time_limit += 5  # Increase difficulty
                 
                 while self.active_popups:
                     popup = self.active_popups.pop()
@@ -464,7 +463,7 @@ class HorrorGUI:
 
                 # Trigger jumpscare, then immediately start the next wave.
                 self.create_jumpscare(0.5, is_consequence=True)
-                self.root.after(500, self.create_popup_hell) # 500ms matches jumpscare
+                self.root.after(500, self.create_popup_hell)  # 500ms matches jumpscare
                 return
 
             self.popup_timer_id = self.root.after(1000, lambda: update_timer(current_time - 1))
@@ -490,7 +489,7 @@ class HorrorGUI:
         button_frame = tk.Frame(popup)
         button_frame.pack(pady=10)
 
-        rps_timer_id = [None] # Use a list to make it mutable in nested functions
+        rps_timer_id = [None]  # Use a list to make it mutable in nested functions
 
         def handle_choice(user_choice):
             # Stop the timer
@@ -505,7 +504,7 @@ class HorrorGUI:
             if user_choice == correct_choice:
                 popup.destroy()
                 self.manager.finish_event()
-            else: # Wrong choice or timeout
+            else:  # Wrong choice or timeout
                 info_label.config(text="YOU LOST", fg=RED, font=("Arial", 24, "bold"))
                 
                 def consequence():
@@ -513,8 +512,8 @@ class HorrorGUI:
                     self.manager.popup_count = 20
                     self.manager.popup_time_limit = 20
                     if not self.manager.popup_hell_active:
-                         self.manager.popup_hell_active = True
-                         self.manager.gui_queue.put({'event': 'popup_hell'})
+                        self.manager.popup_hell_active = True
+                        self.manager.gui_queue.put({'event': 'popup_hell'})
                     self.manager.finish_event()
 
                 self.root.after(1000, consequence)
@@ -526,7 +525,7 @@ class HorrorGUI:
                 return
 
             if time_left < 0:
-                handle_choice(None) # Timeout is a loss
+                handle_choice(None)  # Timeout is a loss
                 return
             
             timer_label.config(text=f"Time remaining: {time_left}")
@@ -562,7 +561,7 @@ class HorrorGUI:
                 new_window_hwnd = random.choice(other_windows)
                 try:
                     # Attempt to bring the window to the foreground
-                    win32gui.ShowWindow(new_window_hwnd, win32con.SW_RESTORE) # Restore if minimized
+                    win32gui.ShowWindow(new_window_hwnd, win32con.SW_RESTORE)  # Restore if minimized
                     win32gui.SetForegroundWindow(new_window_hwnd)
                 except pywintypes.error as e:
                     # Specific error code 1400: Invalid window handle (often happens with background processes)
@@ -571,12 +570,12 @@ class HorrorGUI:
                         print(f"Could not swap window (HWND: {new_window_hwnd}): {e}")
                     # Silently ignore common errors for non-interactive windows
                 except Exception as e:
-                     print(f"Could not swap window (HWND: {new_window_hwnd}): Unexpected error {e}")
+                    print(f"Could not swap window (HWND: {new_window_hwnd}): Unexpected error {e}")
 
                 overlay.destroy()
                 self.manager.finish_event()
 
-            self.root.after(100, do_the_swap) # Flicker for 100ms
+            self.root.after(100, do_the_swap)  # Flicker for 100ms
         else:
             print("Window Swap: No other eligible windows found.")
             self.manager.finish_event()
@@ -609,7 +608,7 @@ class HorrorGUI:
                 finally:
                     self.manager.finish_event()
             
-            self.root.after(5000, revert_screen) # Revert after 5 seconds
+            self.root.after(5000, revert_screen)  # Revert after 5 seconds
         except Exception as e:
             print(f"Could not perform screen flip: {e}")
             self.manager.finish_event()
@@ -623,14 +622,14 @@ class HorrorGUI:
             # Construct a time tuple for SetSystemTime
             # (Year, Month, DayOfWeek, Day, Hour, Minute, Second, Milliseconds)
             new_time_tuple = (
-                original_time_tuple[0] + random.randint(-5, 5), # Year
-                random.randint(1, 12),                    # Month
-                original_time_tuple[2],                   # Day of week (keep original)
-                random.randint(1, 28),                    # Day (simplification, avoids month length issues)
-                random.randint(0, 23),                    # Hour
-                random.randint(0, 59),                    # Minute
-                random.randint(0, 59),                    # Second
-                original_time_tuple[7]                    # Milliseconds
+                original_time_tuple[0] + random.randint(-5, 5),  # Year
+                random.randint(1, 12),                       # Month
+                original_time_tuple[2],                      # Day of week (keep original)
+                random.randint(1, 28),                       # Day (simplification, avoids month length issues)
+                random.randint(0, 23),                       # Hour
+                random.randint(0, 59),                       # Minute
+                random.randint(0, 59),                       # Second
+                original_time_tuple[7]                       # Milliseconds
             )
             win32api.SetSystemTime(*new_time_tuple)
             print("Time Warp: System time altered.")
@@ -643,19 +642,19 @@ class HorrorGUI:
                 except pywintypes.error as e:
                     # Error code 1314: A required privilege is not held by the client
                     if e.winerror == 1314:
-                         print("Time Warp: Could not restore time - Lacking administrator privileges.")
+                        print("Time Warp: Could not restore time - Lacking administrator privileges.")
                     else:
                         print(f"Time Warp: Could not restore time - {e}")
 
-            self.root.after(8000, revert_time) # Revert after 8 seconds
+            self.root.after(8000, revert_time)  # Revert after 8 seconds
 
         except pywintypes.error as e:
             if e.winerror == 1314:
                 print("Time Warp: Could not change system time - Lacking administrator privileges.")
             else:
-                 print(f"Time Warp: Could not change system time - {e}")
+                print(f"Time Warp: Could not change system time - {e}")
         except Exception as e:
-             print(f"Time Warp: Unexpected error changing system time - {e}")
+            print(f"Time Warp: Unexpected error changing system time - {e}")
 
 
         # 2. Create fake calendar notification (Independent of time change success)
@@ -664,7 +663,7 @@ class HorrorGUI:
         noti_width = 300
         noti_height = 100
         noti_x = self.screen_width - noti_width - 10
-        noti_y = self.screen_height - noti_height - 40 # Adjust for taskbar roughly
+        noti_y = self.screen_height - noti_height - 40  # Adjust for taskbar roughly
         notification.geometry(f"{noti_width}x{noti_height}+{noti_x}+{noti_y}")
         notification.overrideredirect(True)
         notification.wm_attributes("-topmost", True)
@@ -683,8 +682,8 @@ class HorrorGUI:
 
         def close_notification():
             if notification.winfo_exists():
-                 notification.destroy()
-            self.manager.finish_event() # Finish the overall Time Warp event
+                notification.destroy()
+            self.manager.finish_event()  # Finish the overall Time Warp event
 
         # Close notification after 7 seconds. Time revert is scheduled separately.
         self.root.after(7000, close_notification) 
@@ -692,10 +691,10 @@ class HorrorGUI:
     def create_browser_hijack(self):
         print("EVENT: Browser Hijack triggered!")
         urls = [
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Rickroll
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",   # Rickroll
             "https://www.nyan.cat/",
             "https://pointerpointer.com/",
-            "http://www.timecube.com/", # Note: This site might be down
+            "http://www.timecube.com/",  # Note: This site might be down
             "https://en.wikipedia.org/wiki/Special:Random"
         ]
         try:
@@ -705,11 +704,44 @@ class HorrorGUI:
         finally:
             self.manager.finish_event()
 
-    def create_typing_possession(self, duration):
+    # --- TYPING POSSESSION CHANGE ---
+    # This function is now completely different.
+    def create_typing_possession(self):
         print("EVENT: Typing Possession triggered!")
-        # This event is invisible, just sets a timer to stop it.
-        # The actual logic is in manager.on_press()
-        self.root.after(int(duration * 1000), self.manager.finish_event)
+        
+        try:
+            # 1. Open notepad
+            subprocess.Popen(['notepad.exe'])
+        except Exception as e:
+            print(f"Typing Possession: Could not open notepad - {e}")
+            self.manager.finish_event()
+            return
+
+        def type_message():
+            try:
+                # 2. Define messages
+                messages = [
+                    "I see you.",
+                    "You aren't safe.",
+                    "Look behind you.",
+                    "Why did you let this happen?",
+                    "It's all your fault.",
+                    "He is coming.",
+                    "You can't escape me.",
+                    "RUN."
+                ]
+                message = random.choice(messages)
+                
+                # 3. Type the message using the manager's controller
+                self.manager.kb_controller.type(message)
+            except Exception as e:
+                print(f"Typing Possession: Error typing message - {e}")
+            finally:
+                # 4. Finish the event
+                self.manager.finish_event()
+
+        # 5. Wait 1 second for notepad to open before typing
+        self.root.after(1000, type_message)
 
 
 def main():
@@ -736,7 +768,7 @@ def main():
     # so it can return False to suppress keys.
     keyboard_listener = keyboard.Listener(
         on_press=manager.on_press, 
-        suppress=False) # Important: Don't globally suppress keys here
+        suppress=False)  # Important: Don't globally suppress keys here
     
     mouse_listener.start()
     keyboard_listener.start()
@@ -744,7 +776,7 @@ def main():
     print("Listeners started. Press Ctrl+C in this terminal to exit.")
     
     try:
-        gui.run() # This blocks and runs the Tkinter main loop
+        gui.run()  # This blocks and runs the Tkinter main loop
     except KeyboardInterrupt:
         print("\nExiting...")
     finally:
@@ -760,4 +792,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -16,3 +16,4 @@ The project has thses events (so far) that are triggered when user is active:
 - Screen Flip: Flips the screen horizontally
 - Time Warp: Changes system time and sends an ominous notification
 - Browser Hijack: opens a new tab in the systems default web browser and opens a random provided link
+- Typing Possession: Opens up Notepad and types a random message
