@@ -114,11 +114,11 @@ class HorrorManager:
         # NUDGE state
         self.is_active = False
         
-        print("FocusFrame is running. Please use the control panel to start.")
+        print("NUDGE is running. Please use the control panel to start.")
 
     def arm_nudges(self):
         self.is_active = True
-        print("NUDGE: The horror has begun.")
+        print("NUDGE: It's time.")
 
     def load_assets(self):
         # ... (asset loading logic remains the same)
@@ -271,15 +271,15 @@ class HorrorGUI:
         self.setup_control_panel()
 
     def setup_control_panel(self):
-        self.root.title("FocusFrame Control Panel")
+        self.root.title("NUDGE Control Panel")
         
         frame = tk.Frame(self.root, padx=20, pady=15)
         frame.pack()
 
-        title_label = tk.Label(frame, text="FocusFrame NUDGE", font=("Arial", 16, "bold"))
+        title_label = tk.Label(frame, text="NUDGE", font=("Arial", 16, "bold"))
         title_label.pack(pady=(0, 10))
 
-        info_label = tk.Label(frame, text="Start the horror events after a delay.", wraplength=250)
+        info_label = tk.Label(frame, text="Stop yourself after...", wraplength=250)
         info_label.pack(pady=(0, 15))
 
         entry_frame = tk.Frame(frame)
@@ -312,7 +312,7 @@ class HorrorGUI:
         self.entry_s.pack(side='bottom')
         self.entry_s.insert(0, "0")
 
-        self.button = tk.Button(frame, text="Begin Countdown...", command=self.start_countdown, font=("Arial", 10, "bold"), bg="#C80000", fg="white", relief="raised")
+        self.button = tk.Button(frame, text="Begin...", command=self.start_countdown, font=("Arial", 10, "bold"), bg="#C80000", fg="white", relief="raised")
         self.button.pack(pady=10, fill='x')
         
         self.error_label = tk.Label(frame, text="", fg="red")
@@ -380,9 +380,9 @@ class HorrorGUI:
             self.root.quit() # This will stop mainloop
 
         image = self.create_tray_icon_image()
-        menu = pystray.Menu(pystray.MenuItem('Quit FocusFrame', on_quit_clicked))
+        menu = pystray.Menu(pystray.MenuItem('Quit NUDGE', on_quit_clicked))
         
-        self.tray_icon = pystray.Icon("FocusFrame", image, "FocusFrame", menu)
+        self.tray_icon = pystray.Icon("NUDGE", image, "NUDGE", menu)
         
         # --- MODIFIED: Update countdown format ---
         hours = self.countdown_seconds // 3600
@@ -607,7 +607,7 @@ class HorrorGUI:
             popup.title("Close Me!")
             popup.protocol("WM_DELETE_WINDOW", lambda p=popup: on_popup_close(p))
             
-            timer_label = tk.Label(popup, text=f"Time: {time_left}", font=("Arial", 16))
+            timer_label = tk.Label(popup, text=f"{time_left}", font=("Arial", 16), fg='red')
             timer_label.pack(pady=5)
             
             close_button = tk.Button(popup, text="Close", command=lambda p=popup: on_popup_close(p))
@@ -622,7 +622,7 @@ class HorrorGUI:
                 if popup.winfo_exists():
                     for widget in popup.winfo_children():
                         if isinstance(widget, tk.Label):
-                            widget.config(text=f"Time: {current_time}")
+                            widget.config(text=f"{current_time}", fg='red')
 
             if current_time <= 0:  # Timer ran out, player lost
                 print("Popup Hell: FAILED")
@@ -702,7 +702,7 @@ class HorrorGUI:
                 handle_choice(None)  # Timeout is a loss
                 return
             
-            timer_label.config(text=f"Time remaining: {time_left}")
+            timer_label.config(text=f"Time remaining: {time_left}", fg='red')
             rps_timer_id[0] = self.root.after(1000, lambda: update_timer(time_left - 1))
 
         rock_btn = tk.Button(button_frame, text="Rock", command=lambda: handle_choice('rock'))
@@ -719,7 +719,7 @@ class HorrorGUI:
         
         windows = []
         def winEnumHandler(hwnd, ctx):
-            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd) != '' and "FocusFrame" not in win32gui.GetWindowText(hwnd):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd) != '' and "NUDGE" not in win32gui.GetWindowText(hwnd):
                 windows.append(hwnd)
         
         win32gui.EnumWindows(winEnumHandler, None)
@@ -868,7 +868,7 @@ class HorrorGUI:
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ",   # Rickroll
             "https://www.nyan.cat/",
             "https://pointerpointer.com/",
-            "http://www.timecube.com/",  # Note: This site might be down
+            "https://www.lomando.com/main.html",
             "https.en.wikipedia.org/wiki/Special:Random"
         ]
         try:
@@ -963,7 +963,7 @@ def main():
         # Explicitly wait for listener threads to finish
         mouse_listener.join()
         keyboard_listener.join()
-        print("FocusFrame has exited.")
+        print("NUDGE has exited.")
 
 if __name__ == "__main__":
     main()
