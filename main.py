@@ -1,5 +1,5 @@
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import random
 import time
 import threading
@@ -12,19 +12,20 @@ import winsound
 import queue
 import math
 import webbrowser
-import subprocess  # Added for launching notepad
+import subprocess
 
 # --- Dependencies for Global Input and Overlay ---
-# You must install these libraries: pip install pynput pywin32 Pillow
+# You must install these libraries: pip install pynput pywin32 Pillow pystray
 try:
     from pynput import mouse, keyboard
     import win32api
     import win32con
     import win32gui
     import pywintypes
+    import pystray
 except ImportError:
     print("Required libraries not found. Please run:")
-    print("pip install pynput pywin32 Pillow")
+    print("pip install pynput pywin32 Pillow pystray")
     sys.exit(1)
 
 # --- Configuration ---
@@ -109,7 +110,15 @@ class HorrorManager:
         
         self.image_paths, self.sound_paths, self.entity_image_paths = [], [], []
         self.load_assets()
-        print("FocusFrame is running in the background. Good luck.")
+        
+        # NUDGE state
+        self.is_active = False
+        
+        print("FocusFrame is running. Please use the control panel to start.")
+
+    def arm_nudges(self):
+        self.is_active = True
+        print("NUDGE: The horror has begun.")
 
     def load_assets(self):
         # ... (asset loading logic remains the same)
@@ -136,6 +145,9 @@ class HorrorManager:
 
     def on_mouse_input(self):
         """Called by mouse move/click listeners."""
+        if not self.is_active:
+            return
+            
         if self.active_event == "dont_move" and self.dont_move_data.get('detection_active'):
             self.dont_move_data['failed'] = True
         elif self.active_event is None:
@@ -144,6 +156,9 @@ class HorrorManager:
 
     def on_press(self, key):
         """Called by keyboard listener. Can suppress keys by returning False."""
+        if not self.is_active:
+            return True
+            
         possession_triggered = False
 
         if self.active_event == "dont_move" and self.dont_move_data.get('detection_active'):
@@ -237,14 +252,173 @@ class HorrorManager:
 # --- GUI Manager (Runs in Main Thread) ---
 
 class HorrorGUI:
-    def __init__(self, manager):
+    def __init__(self, manager, mouse_listener, keyboard_listener):
         self.manager = manager
+        self.mouse_listener = mouse_listener
+        self.keyboard_listener = keyboard_listener
+        
         self.root = tk.Tk()
-        self.root.withdraw()  # Hide the main window
+        # self.root.withdraw() # Don't withdraw yet
+        
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
         self.active_popups = []
         self.popup_timer_id = None
+        
+        self.countdown_seconds = 0
+        self.tray_icon = None
+        
+        self.setup_control_panel()
+
+    def setup_control_panel(self):
+        self.root.title("FocusFrame Control Panel")
+        
+        frame = tk.Frame(self.root, padx=20, pady=15)
+        frame.pack()
+
+        title_label = tk.Label(frame, text="FocusFrame NUDGE", font=("Arial", 16, "bold"))
+        title_label.pack(pady=(0, 10))
+
+        info_label = tk.Label(frame, text="Start the horror events after a delay.", wraplength=250)
+        info_label.pack(pady=(0, 15))
+
+        entry_frame = tk.Frame(frame)
+        entry_frame.pack(pady=5)
+        
+        # --- NEW: Hours Entry ---
+        h_frame = tk.Frame(entry_frame)
+        h_frame.pack(side='left', padx=5)
+        h_label = tk.Label(h_frame, text="Hours:")
+        h_label.pack(side='top')
+        self.entry_h = tk.Entry(h_frame, width=5)
+        self.entry_h.pack(side='bottom')
+        self.entry_h.insert(0, "0")
+
+        # --- MODIFIED: Minutes Entry ---
+        m_frame = tk.Frame(entry_frame)
+        m_frame.pack(side='left', padx=5)
+        m_label = tk.Label(m_frame, text="Minutes:")
+        m_label.pack(side='top')
+        self.entry_m = tk.Entry(m_frame, width=5)
+        self.entry_m.pack(side='bottom')
+        self.entry_m.insert(0, "15") # Default value
+
+        # --- NEW: Seconds Entry ---
+        s_frame = tk.Frame(entry_frame)
+        s_frame.pack(side='left', padx=5)
+        s_label = tk.Label(s_frame, text="Seconds:")
+        s_label.pack(side='top')
+        self.entry_s = tk.Entry(s_frame, width=5)
+        self.entry_s.pack(side='bottom')
+        self.entry_s.insert(0, "0")
+
+        self.button = tk.Button(frame, text="Begin Countdown...", command=self.start_countdown, font=("Arial", 10, "bold"), bg="#C80000", fg="white", relief="raised")
+        self.button.pack(pady=10, fill='x')
+        
+        self.error_label = tk.Label(frame, text="", fg="red")
+        self.error_label.pack(pady=(5, 0))
+
+        # Center the window
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        x = (self.screen_width // 2) - (width // 2)
+        y = (self.screen_height // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
+        self.root.resizable(False, False)
+
+    def start_countdown(self):
+        # --- MODIFIED: Get all three values ---
+        hours_str = self.entry_h.get()
+        minutes_str = self.entry_m.get()
+        seconds_str = self.entry_s.get()
+        
+        try:
+            # Default to 0 if field is empty
+            hours = float(hours_str) if hours_str else 0
+            minutes = float(minutes_str) if minutes_str else 0
+            seconds = float(seconds_str) if seconds_str else 0
+            
+            total_seconds = (hours * 3600) + (minutes * 60) + seconds
+            
+            if total_seconds <= 0:
+                raise ValueError("Time must be positive")
+            
+            self.error_label.config(text="")
+            self.countdown_seconds = int(total_seconds)
+            
+            # Hide control panel
+            self.root.withdraw()
+            
+            # Start the listeners
+            print("Listeners started. Countdown beginning.")
+            self.mouse_listener.start()
+            self.keyboard_listener.start()
+            
+            # Start tray icon thread
+            threading.Thread(target=self.start_tray_icon, daemon=True).start()
+            
+            # Start countdown loop
+            self.root.after(1000, self.update_countdown)
+            
+        except ValueError:
+            self.error_label.config(text="Please enter valid, positive numbers.")
+
+    def create_tray_icon_image(self):
+        # Create a simple 64x64 icon
+        image = Image.new('RGBA', (64, 64), (0, 0, 0, 0)) # Transparent
+        dc = ImageDraw.Draw(image)
+        # Draw a red circle with 'FF'
+        dc.ellipse((2, 2, 62, 62), fill=RED, outline=WHITE, width=4)
+        dc.text((16, 18), "FF", fill=WHITE, font_size=32)
+        return image
+
+    def start_tray_icon(self):
+        def on_quit_clicked(icon, item):
+            print("Quit clicked from tray icon.")
+            icon.stop()
+            self.root.quit() # This will stop mainloop
+
+        image = self.create_tray_icon_image()
+        menu = pystray.Menu(pystray.MenuItem('Quit FocusFrame', on_quit_clicked))
+        
+        self.tray_icon = pystray.Icon("FocusFrame", image, "FocusFrame", menu)
+        
+        # --- MODIFIED: Update countdown format ---
+        hours = self.countdown_seconds // 3600
+        mins = (self.countdown_seconds % 3600) // 60
+        secs = self.countdown_seconds % 60
+        self.tray_icon.title = f"NUDGE starts in {hours}:{mins:02d}:{secs:02d}"
+        
+        self.tray_icon.run() # This is a blocking call, hence the thread
+
+    def update_countdown(self):
+        if self.countdown_seconds > 0:
+            self.countdown_seconds -= 1
+            
+            # --- MODIFIED: Update countdown format ---
+            hours = self.countdown_seconds // 3600
+            mins = (self.countdown_seconds % 3600) // 60
+            secs = self.countdown_seconds % 60
+            new_title = f"NUDGE starts in {hours}:{mins:02d}:{secs:02d}"
+            
+            if self.tray_icon:
+                self.tray_icon.title = new_title
+                
+            self.root.after(1000, self.update_countdown)
+        else:
+            # Countdown finished!
+            if self.tray_icon:
+                self.tray_icon.title = "NUDGE is active!"
+                # We stop the icon thread, but it will be replaced by a new one
+                # A bit clunky, but pystray title update from main thread is iffy
+                # Better: just update title and leave it.
+            
+            # --- MODIFIED: Update title on finish ---
+            if self.tray_icon:
+                self.tray_icon.title = "NUDGE is Active!"
+            
+            self.manager.arm_nudges() # Arm the horror
 
     def run(self):
         self.process_queue()
@@ -695,7 +869,7 @@ class HorrorGUI:
             "https://www.nyan.cat/",
             "https://pointerpointer.com/",
             "http://www.timecube.com/",  # Note: This site might be down
-            "https://en.wikipedia.org/wiki/Special:Random"
+            "https.en.wikipedia.org/wiki/Special:Random"
         ]
         try:
             webbrowser.open_new_tab(random.choice(urls))
@@ -751,7 +925,6 @@ def main():
     
     gui_queue = queue.Queue()
     manager = HorrorManager(gui_queue)
-    gui = HorrorGUI(manager)
 
     def on_move_wrapper(x, y): 
         manager.update_mouse_pos(x, y)
@@ -760,20 +933,17 @@ def main():
         manager.update_mouse_pos(x, y)
         manager.on_mouse_input()
     
+    # Create listeners but don't start them
     mouse_listener = mouse.Listener(
         on_move=on_move_wrapper,
         on_click=on_click_wrapper)
     
-    # Keyboard listener is bound directly to the manager method
-    # so it can return False to suppress keys.
     keyboard_listener = keyboard.Listener(
         on_press=manager.on_press, 
-        suppress=False)  # Important: Don't globally suppress keys here
+        suppress=False) 
     
-    mouse_listener.start()
-    keyboard_listener.start()
-    
-    print("Listeners started. Press Ctrl+C in this terminal to exit.")
+    # Pass listeners to GUI
+    gui = HorrorGUI(manager, mouse_listener, keyboard_listener)
     
     try:
         gui.run()  # This blocks and runs the Tkinter main loop
@@ -785,10 +955,16 @@ def main():
             mouse_listener.stop()
         if keyboard_listener.is_alive():
             keyboard_listener.stop()
+            
+        # Stop tray icon if it's alive
+        if gui.tray_icon:
+            gui.tray_icon.stop()
         
         # Explicitly wait for listener threads to finish
         mouse_listener.join()
         keyboard_listener.join()
+        print("FocusFrame has exited.")
 
 if __name__ == "__main__":
     main()
+
