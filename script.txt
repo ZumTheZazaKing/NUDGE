@@ -1,0 +1,54 @@
+The 90-Second Pitch Script (for "NUDGE")
+(0:00 - 0:15) — The Hook & The "Delulu"
+
+(Start with high energy)
+
+"Good evening! We’ve all been there. It’s 1 AM. You told yourself you’d log off hours ago. But you're still scrolling, still coding, still lost in 'just one more video.'
+
+That's the 'delulu' of the digital age: thinking we have self-control.
+
+The 'solulu'? We’ve tried gentle solutions. Pomodoro timers we ignore. Notifications we swipe away. They don't work. Why? Because they have no consequences."
+
+(0:15 - 0:30) — The Solution: NUDGE
+
+"That’s why we built NUDGE.
+
+NUDGE isn't a gentle reminder. It's a digital intervention. It’s tough love, in software form. It’s designed to make you actually log off and touch grass.
+
+Here's how it works. You're your own boss. You set your screen time limit."
+
+(0:30 - 0:50) — The Live Demo: Arming the Trap
+
+"Let's open the control panel. I'll tell NUDGE that my productive time is over in... let's say... 10 seconds.
+
+(Show the app, enter 0, 0, 10)
+
+I hit 'Begin Countdown.' The app disappears. It's now silently watching from the system tray.
+
+(Point to the tray icon)
+
+...3... 2... 1... It’s armed. Now, as long as I’m away from the computer, everything is fine. But I'm 'delulu.' I'm going to try and keep working. I just need to send one more email..."
+
+(0:50 - 1:15) — The Demo: Springing the Trap
+
+"Watch what happens the moment I move the mouse...
+
+(Move the mouse. An ENTITY or JUMPSCARE fires).
+
+WHOA! Okay, that’s my first NUDGE. But I'm persistent. I'm going to try and type...
+
+(Click in a text editor and press a key. NOTEPAD pops up and types 'RUN.')
+
+It's possessed! It's typing at me. But I'm still here! I'm still trying to close the windows...
+
+(Move the mouse more. POPUP HELL or SCREEN FLIP triggers).
+
+It's chaos! It's launching popups, it's flipping my screen, it's fighting me at every turn! This is unusable!"
+
+(1:15 - 1:30) — The Clincher
+
+"NUDGE makes being online more painful than logging off. The only way to stop this... is to do what I should have done an hour ago: shut down the computer.
+
+It’s the ultimate 'solulu' for your 'delulu' screen addiction.
+
+We're NUDGE. Thank you."
