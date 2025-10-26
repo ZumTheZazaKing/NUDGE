@@ -1,0 +1,26 @@
+# gui and image
+tkinter
+Pillow
+
+# system interaction and monitoring (windows only)
+pynput
+pywin32
+pystray
+
+
+
+# standard libraries (should already be in python):
+
+# random
+# time
+# threading
+# sys
+# os
+# wave
+# struct
+# atexit
+# winsound
+# queue
+# math
+# webbrowser
+# subprocess
