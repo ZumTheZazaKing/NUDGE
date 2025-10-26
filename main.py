@@ -869,7 +869,7 @@ class HorrorGUI:
             "https://www.nyan.cat/",
             "https://pointerpointer.com/",
             "https://www.lomando.com/main.html",
-            "https.en.wikipedia.org/wiki/Special:Random"
+            "https://en.wikipedia.org/wiki/Special:Random"
         ]
         try:
             webbrowser.open_new_tab(random.choice(urls))

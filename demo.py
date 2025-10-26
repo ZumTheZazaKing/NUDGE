@@ -51,7 +51,7 @@ JUMPSCARE_CHANCE = 2                     # Was 200
 DONT_MOVE_CHANCE = 99999                 # Disable this one for the demo
 ENTITY_CHANCE = 2                        # Was 600
 POPUP_HELL_CHANCE = 3                    # Was 700
-RPS_CHANCE = 3                           # Disable this
+RPS_CHANCE = 3                           # 
 WINDOW_SWAP_CHANCE = 4                   # Was 900
 SCREEN_FLIP_CHANCE = 3                   # Was 1000
 TIME_WARP_CHANCE = 99999                 # Disable this
@@ -868,7 +868,7 @@ class HorrorGUI:
             "https://www.nyan.cat/",
             "https://pointerpointer.com/",
             "https://www.lomando.com/main.html",
-            "https.en.wikipedia.org/wiki/Special:Random"
+            "https://en.wikipedia.org/wiki/Special:Random"
         ]
         try:
             webbrowser.open_new_tab(random.choice(urls))
