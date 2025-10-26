@@ -24,11 +24,17 @@ This project is written in Python and is **Windows-only** (for now).
 
 #### 1. Prerequisites
 
-You must have Python 3.x installed and accessible from your command line.
+You must have **Python 3.x** installed and accessible from your command line.
 
 #### 2. Install Dependencies
 
-Certain libraries are required. They are listed in the provided requirements.txt file. I recommend using a virtual environment.
+Certain libraries are required. **They are listed in the provided requirements.txt file.** Simply perform the following command:
+
+```
+pip install -r requirements.txt
+```
+
+**I recommend using a virtual environment.**
 
 
 
